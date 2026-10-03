@@ -1,0 +1,53 @@
+@startuml
+title Admin User - Create User (POST /api/admin/users)
+hide footbox
+actor Client
+participant UserController
+participant AppUserService
+participant AppUserRepository
+participant PasswordEncoder
+participant GlobalExceptionHandler as GEH
+
+Client -> UserController: POST /api/admin/users {username, email, password, role, status?}
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/admin/** requires role ADMIN
+
+alt Request body fails @Valid (blank fields, invalid email, password shorter than 6, role is null)
+    UserController --> GEH: MethodArgumentNotValidException
+    GEH --> Client: 400 Bad Request (field errors)
+else Request body is valid
+    UserController -> AppUserService: createUser(request)
+    AppUserService -> AppUserRepository: existsByUsername(username)
+    AppUserRepository --> AppUserService: boolean
+
+    alt Username already exists
+        AppUserService --> UserController: throw DuplicateResourceException
+        UserController --> GEH: DuplicateResourceException
+        GEH --> Client: 409 Conflict
+    else Username is available
+        AppUserService -> AppUserRepository: existsByEmail(email)
+        AppUserRepository --> AppUserService: boolean
+
+        alt Email already exists
+            AppUserService --> UserController: throw DuplicateResourceException
+            UserController --> GEH: DuplicateResourceException
+            GEH --> Client: 409 Conflict
+        else Email is available
+            AppUserService -> PasswordEncoder: encode(request.getPassword())
+            PasswordEncoder --> AppUserService: encoded password
+
+            alt request.getStatus() != null
+                AppUserService -> AppUserService: status = request.getStatus()
+            else request.getStatus() == null
+                AppUserService -> AppUserService: status = ACTIVE
+            end
+
+            AppUserService -> AppUserService: user = AppUser.builder().username(..).email(..).password(..).role(..).status(..).build()
+            AppUserService -> AppUserRepository: save(user)
+            AppUserRepository --> AppUserService: saved AppUser
+            AppUserService -> AppUserService: UserResponse.from(savedUser)
+            AppUserService --> UserController: UserResponse
+            UserController --> Client: 201 Created (UserResponse)
+        end
+    end
+end
+@enduml

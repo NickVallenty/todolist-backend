@@ -1,0 +1,28 @@
+@startuml
+title Admin User - Get User By Id (GET /api/admin/users/{userId})
+hide footbox
+actor Client
+participant UserController
+participant AppUserService
+participant AppUserRepository
+participant GlobalExceptionHandler as GEH
+
+Client -> UserController: GET /api/admin/users/{userId}
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/admin/** requires role ADMIN
+
+UserController -> AppUserService: getUserById(userId)
+
+AppUserService -> AppUserService: findUserOrThrow(userId)
+AppUserService -> AppUserRepository: findById(userId)
+AppUserRepository --> AppUserService: Optional<AppUser>
+
+alt Optional is empty (user not found)
+    AppUserService --> UserController: throw ResourceNotFoundException
+    UserController --> GEH: ResourceNotFoundException
+    GEH --> Client: 404 Not Found
+else User found
+    AppUserService -> AppUserService: UserResponse.from(user)
+    AppUserService --> UserController: UserResponse
+    UserController --> Client: 200 OK (UserResponse)
+end
+@enduml

@@ -1,0 +1,35 @@
+@startuml
+title Todo - Create Todo (POST /api/todos)
+hide footbox
+actor Client
+participant TodoController
+participant TodoService
+participant AppUserRepository
+participant TodoRepository
+participant GlobalExceptionHandler as GEH
+
+Client -> TodoController: POST /api/todos {title, description}
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/todos/** requires role USER
+
+alt Request body fails @Valid (title blank or longer than 200)
+    TodoController --> GEH: MethodArgumentNotValidException
+    GEH --> Client: 400 Bad Request (field errors)
+else Request body is valid
+    TodoController -> TodoService: createTodo(principal.getUserId(), request)
+    TodoService -> AppUserRepository: findById(userId)
+    AppUserRepository --> TodoService: Optional<AppUser>
+
+    alt Optional is empty (user not found)
+        TodoService --> TodoController: throw ResourceNotFoundException
+        TodoController --> GEH: ResourceNotFoundException
+        GEH --> Client: 404 Not Found
+    else User found
+        TodoService -> TodoService: todo = Todo.builder().user(user).title(..).description(..).status(PENDING).build()
+        TodoService -> TodoRepository: save(todo)
+        TodoRepository --> TodoService: saved Todo
+        TodoService -> TodoService: TodoResponse.from(savedTodo)
+        TodoService --> TodoController: TodoResponse
+        TodoController --> Client: 201 Created (TodoResponse)
+    end
+end
+@enduml

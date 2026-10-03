@@ -1,0 +1,28 @@
+@startuml
+title Todo - Get Todo List (GET /api/todos)
+hide footbox
+actor Client
+participant TodoController
+participant TodoService
+participant TodoSpecifications
+participant TodoRepository
+
+Client -> TodoController: GET /api/todos?keyword=..&status=..&page=..&size=..
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/todos/** requires role USER
+
+TodoController -> TodoService: getTodos(principal.getUserId(), keyword, status, pageable)
+TodoService -> TodoSpecifications: forUser(userId, keyword, status)
+TodoSpecifications -> TodoSpecifications: predicate = (todo.user.userId == userId)
+opt keyword != null AND !keyword.isBlank()
+    TodoSpecifications -> TodoSpecifications: predicate AND lower(title) LIKE %keyword%
+end
+opt status != null
+    TodoSpecifications -> TodoSpecifications: predicate AND status == status
+end
+TodoSpecifications --> TodoService: Specification<Todo>
+TodoService -> TodoRepository: findAll(specification, pageable)
+TodoRepository --> TodoService: Page<Todo>
+TodoService -> TodoService: page.map(TodoResponse::from)
+TodoService --> TodoController: Page<TodoResponse>
+TodoController --> Client: 200 OK (Page<TodoResponse>)
+@enduml

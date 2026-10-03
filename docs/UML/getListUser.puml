@@ -1,0 +1,31 @@
+@startuml
+title Admin User - Get User List (GET /api/admin/users)
+hide footbox
+actor Client
+participant UserController
+participant AppUserService
+participant UserSpecifications
+participant AppUserRepository
+
+Client -> UserController: GET /api/admin/users?keyword=..&role=..&status=..&page=..&size=..
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/admin/** requires role ADMIN
+
+UserController -> AppUserService: getUsers(keyword, role, status, pageable)
+AppUserService -> UserSpecifications: search(keyword, role, status)
+UserSpecifications -> UserSpecifications: predicate = conjunction() (no filtering)
+opt keyword != null AND !keyword.isBlank()
+    UserSpecifications -> UserSpecifications: predicate AND (lower(username) LIKE %keyword% OR lower(email) LIKE %keyword%)
+end
+opt role != null
+    UserSpecifications -> UserSpecifications: predicate AND role == role
+end
+opt status != null
+    UserSpecifications -> UserSpecifications: predicate AND status == status
+end
+UserSpecifications --> AppUserService: Specification<AppUser>
+AppUserService -> AppUserRepository: findAll(specification, pageable)
+AppUserRepository --> AppUserService: Page<AppUser>
+AppUserService -> AppUserService: page.map(UserResponse::from)
+AppUserService --> UserController: Page<UserResponse>
+UserController --> Client: 200 OK (Page<UserResponse>)
+@enduml

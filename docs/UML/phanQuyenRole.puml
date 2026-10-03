@@ -1,0 +1,45 @@
+@startuml
+title Role-based Authorization (SecurityConfig.securityFilterChain)
+hide footbox
+actor Client
+participant SecurityConfig
+participant JwtAuthenticationFilter as JwtFilter
+participant AuthController
+participant UserController
+participant TodoController
+
+Client -> SecurityConfig: HTTP request (Authorization: Bearer token, optional)
+SecurityConfig -> JwtFilter: doFilter (added before UsernamePasswordAuthenticationFilter)
+JwtFilter --> SecurityConfig: Authentication is set (valid token and ACTIVE user)\nor left empty (see JWT Filter diagram)
+
+note over SecurityConfig: authorizeHttpRequests rules are matched in declaration order.\nhasRole("X") checks the authority "ROLE_X".
+
+alt Path matches /api/auth/** (permitAll)
+    SecurityConfig -> AuthController: allow request
+    AuthController --> Client: Login response
+else Path matches /api/admin/** (hasRole ADMIN)
+    alt No Authentication (missing, invalid or expired token, or inactive user)
+        SecurityConfig --> Client: 401 Unauthorized (authenticationEntryPoint)
+    else Authentication has ROLE_ADMIN
+        SecurityConfig -> UserController: allow request
+        UserController --> Client: Admin User response
+    else Authentication without ROLE_ADMIN (for example ROLE_USER)
+        SecurityConfig --> Client: 403 Forbidden (accessDeniedHandler)
+    end
+else Path matches /api/todos/** (hasRole USER)
+    alt No Authentication
+        SecurityConfig --> Client: 401 Unauthorized (authenticationEntryPoint)
+    else Authentication has ROLE_USER
+        SecurityConfig -> TodoController: allow request
+        TodoController --> Client: Todo response
+    else Authentication without ROLE_USER (for example ROLE_ADMIN)
+        SecurityConfig --> Client: 403 Forbidden (accessDeniedHandler)
+    end
+else Any other path (anyRequest().authenticated())
+    alt No Authentication
+        SecurityConfig --> Client: 401 Unauthorized (authenticationEntryPoint)
+    else Authenticated with any role
+        SecurityConfig --> Client: allow request
+    end
+end
+@enduml

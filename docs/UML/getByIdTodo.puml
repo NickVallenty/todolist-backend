@@ -1,0 +1,34 @@
+@startuml
+title Todo - Get Todo By Id (GET /api/todos/{todoId})
+hide footbox
+actor Client
+participant TodoController
+participant TodoService
+participant TodoRepository
+participant GlobalExceptionHandler as GEH
+
+Client -> TodoController: GET /api/todos/{todoId}
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/todos/** requires role USER
+
+TodoController -> TodoService: getTodoById(principal.getUserId(), todoId)
+
+TodoService -> TodoService: findOwnedTodoOrThrow(userId, todoId)
+TodoService -> TodoRepository: findById(todoId)
+TodoRepository --> TodoService: Optional<Todo>
+
+alt Optional is empty (todo not found)
+    TodoService --> TodoController: throw ResourceNotFoundException
+    TodoController --> GEH: ResourceNotFoundException
+    GEH --> Client: 404 Not Found
+else Todo found
+    alt !todo.getUser().getUserId().equals(userId) (not the owner)
+        TodoService --> TodoController: throw ResourceNotFoundException (same message)
+        TodoController --> GEH: ResourceNotFoundException
+        GEH --> Client: 404 Not Found
+    else Requester is the owner
+        TodoService -> TodoService: TodoResponse.from(todo)
+        TodoService --> TodoController: TodoResponse
+        TodoController --> Client: 200 OK (TodoResponse)
+    end
+end
+@enduml

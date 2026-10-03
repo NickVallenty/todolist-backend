@@ -1,0 +1,54 @@
+@startuml
+title JWT Filter - JwtAuthenticationFilter.doFilterInternal
+hide footbox
+actor Client
+participant JwtAuthenticationFilter as JwtFilter
+participant JwtUtil
+participant CustomUserDetailsService as UserDetailsService
+participant AppUserRepository
+participant SecurityContextHolder
+participant FilterChain
+
+Client -> JwtFilter: HTTP request
+JwtFilter -> JwtFilter: authHeader = request.getHeader("Authorization")
+
+alt authHeader == null OR does not start with "Bearer "
+    note over JwtFilter: Token is not processed,\nno Authentication is set
+else authHeader starts with "Bearer "
+    JwtFilter -> JwtFilter: token = authHeader.substring(7)
+    JwtFilter -> JwtUtil: extractUsername(token)
+    note right of JwtUtil: Parses the JWT, verifies the signature and expiration.\nThrows JwtException when the token is invalid or expired.
+
+    alt JwtException or IllegalArgumentException is thrown
+        JwtUtil --> JwtFilter: throw exception
+        JwtFilter -> JwtFilter: catch block (empty): ignore, no Authentication is set
+    else Token parsed successfully
+        JwtUtil --> JwtFilter: username
+        JwtFilter -> SecurityContextHolder: getContext().getAuthentication()
+        SecurityContextHolder --> JwtFilter: Authentication or null
+
+        opt username != null AND getAuthentication() == null
+            JwtFilter -> UserDetailsService: loadUserByUsername(username)
+            UserDetailsService -> AppUserRepository: findByUsername(username)
+            AppUserRepository --> UserDetailsService: Optional<AppUser>
+
+            alt Optional is empty
+                UserDetailsService --> JwtFilter: throw UsernameNotFoundException
+                note right of JwtFilter: Not handled by the catch block\n(it only catches JwtException | IllegalArgumentException)
+            else User found
+                UserDetailsService --> JwtFilter: new CustomUserDetails(appUser)
+                JwtFilter -> JwtUtil: isTokenValid(token, username)
+                JwtUtil --> JwtFilter: boolean
+
+                opt isTokenValid == true AND userDetails.isEnabled() (status == ACTIVE)
+                    JwtFilter -> JwtFilter: authToken = new UsernamePasswordAuthenticationToken(userDetails, null, authorities)
+                    JwtFilter -> JwtFilter: authToken.setDetails(WebAuthenticationDetailsSource.buildDetails(request))
+                    JwtFilter -> SecurityContextHolder: getContext().setAuthentication(authToken)
+                end
+            end
+        end
+    end
+end
+
+JwtFilter -> FilterChain: doFilter(request, response)
+@enduml

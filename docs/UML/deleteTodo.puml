@@ -1,0 +1,35 @@
+@startuml
+title Todo - Delete Todo (DELETE /api/todos/{todoId})
+hide footbox
+actor Client
+participant TodoController
+participant TodoService
+participant TodoRepository
+participant GlobalExceptionHandler as GEH
+
+Client -> TodoController: DELETE /api/todos/{todoId}
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/todos/** requires role USER
+
+TodoController -> TodoService: deleteTodo(principal.getUserId(), todoId)
+
+TodoService -> TodoService: findOwnedTodoOrThrow(userId, todoId)
+TodoService -> TodoRepository: findById(todoId)
+TodoRepository --> TodoService: Optional<Todo>
+
+alt Optional is empty (todo not found)
+    TodoService --> TodoController: throw ResourceNotFoundException
+    TodoController --> GEH: ResourceNotFoundException
+    GEH --> Client: 404 Not Found
+else Todo found
+    alt !todo.getUser().getUserId().equals(userId) (not the owner)
+        TodoService --> TodoController: throw ResourceNotFoundException (same message)
+        TodoController --> GEH: ResourceNotFoundException
+        GEH --> Client: 404 Not Found
+    else Requester is the owner
+        TodoService -> TodoRepository: delete(todo)
+        TodoRepository --> TodoService: void
+        TodoService --> TodoController: void
+        TodoController --> Client: 204 No Content
+    end
+end
+@enduml

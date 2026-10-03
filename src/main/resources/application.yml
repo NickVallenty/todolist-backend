@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: todolist-backend
+
+  datasource:
+    # Đổi lại thông tin kết nối SQL Server 2019 cho đúng máy của bạn
+    url: jdbc:sqlserver://localhost:1433;databaseName=TodoListDB;encrypt=true;trustServerCertificate=true
+    username: sa
+    password: YourStrong@Passw0rd
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    hibernate:
+      # dùng "update" khi dev để Hibernate tự tạo/đồng bộ bảng theo Entity.
+      # Khi lên production nên đổi thành "validate" và quản lý schema bằng migration script riêng.
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+  security:
+    filter:
+      order: 10
+
+app:
+  jwt:
+    # Đổi secret này khi deploy thật (>= 32 ký tự, nên lưu qua biến môi trường / vault)
+    secret: change-this-super-secret-key-please-make-it-long-and-random-32bytes+
+    expiration-ms: 86400000   # 24 giờ
+  admin:
+    # Tài khoản Admin mặc định được seed khi khởi động lần đầu (nếu chưa có Admin nào trong DB)
+    default-username: admin
+    default-email: admin@todolist.local
+    default-password: Admin@123

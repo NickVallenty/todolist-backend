@@ -1,0 +1,50 @@
+@startuml
+title Login - POST /api/auth/login
+hide footbox
+actor Client
+participant AuthController
+participant AuthService
+participant AppUserRepository
+participant PasswordEncoder
+participant JwtUtil
+participant GlobalExceptionHandler as GEH
+
+Client -> AuthController: POST /api/auth/login {username, password}
+note right of Client: /api/auth/** is permitAll (no token required)
+
+alt Request body fails @Valid (blank username or password)
+    AuthController --> GEH: MethodArgumentNotValidException
+    GEH --> Client: 400 Bad Request (field errors)
+else Request body is valid
+    AuthController -> AuthService: login(request)
+    AuthService -> AppUserRepository: findByUsername(username)
+    AppUserRepository --> AuthService: Optional<AppUser>
+
+    alt Optional is empty (user not found)
+        AuthService --> AuthController: throw BadCredentialsException
+        AuthController --> GEH: BadCredentialsException
+        GEH --> Client: 401 Unauthorized ("Invalid username or password")
+    else User found
+        AuthService -> PasswordEncoder: matches(request.getPassword(), user.getPassword())
+        PasswordEncoder --> AuthService: boolean
+
+        alt matches == false
+            AuthService --> AuthController: throw BadCredentialsException
+            AuthController --> GEH: BadCredentialsException
+            GEH --> Client: 401 Unauthorized ("Invalid username or password")
+        else matches == true
+            alt user.getStatus() != ACTIVE
+                AuthService --> AuthController: throw BadCredentialsException (account is inactive)
+                AuthController --> GEH: BadCredentialsException
+                GEH --> Client: 401 Unauthorized ("Invalid username or password")
+                note right of GEH: The handler always returns the generic message,\nso the "inactive" message is never exposed
+            else user.getStatus() == ACTIVE
+                AuthService -> JwtUtil: generateToken(userId, username, role.name())
+                JwtUtil --> AuthService: token
+                AuthService --> AuthController: LoginResponse(token, "Bearer", userId, username, role)
+                AuthController --> Client: 200 OK (LoginResponse)
+            end
+        end
+    end
+end
+@enduml

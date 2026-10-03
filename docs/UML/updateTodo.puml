@@ -1,0 +1,51 @@
+@startuml
+title Todo - Update Todo (PUT /api/todos/{todoId})
+hide footbox
+actor Client
+participant TodoController
+participant TodoService
+participant TodoRepository
+participant GlobalExceptionHandler as GEH
+
+Client -> TodoController: PUT /api/todos/{todoId} {title?, description?, status?}
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/todos/** requires role USER
+
+alt Request body fails @Valid (title longer than 200)
+    TodoController --> GEH: MethodArgumentNotValidException
+    GEH --> Client: 400 Bad Request (field errors)
+else Request body is valid
+    TodoController -> TodoService: updateTodo(principal.getUserId(), todoId, request)
+
+    TodoService -> TodoService: findOwnedTodoOrThrow(userId, todoId)
+    TodoService -> TodoRepository: findById(todoId)
+    TodoRepository --> TodoService: Optional<Todo>
+
+    alt Optional is empty (todo not found)
+        TodoService --> TodoController: throw ResourceNotFoundException
+        TodoController --> GEH: ResourceNotFoundException
+        GEH --> Client: 404 Not Found
+    else Todo found
+        alt !todo.getUser().getUserId().equals(userId) (not the owner)
+            TodoService --> TodoController: throw ResourceNotFoundException (same message)
+            TodoController --> GEH: ResourceNotFoundException
+            GEH --> Client: 404 Not Found
+        else Requester is the owner
+            note over TodoService: The three opt blocks below are independent and at the same level
+            opt request.getTitle() != null AND !request.getTitle().isBlank()
+                TodoService -> TodoService: todo.setTitle(title)
+            end
+            opt request.getDescription() != null
+                TodoService -> TodoService: todo.setDescription(description)
+            end
+            opt request.getStatus() != null
+                TodoService -> TodoService: todo.setStatus(status)
+            end
+            TodoService -> TodoRepository: save(todo)
+            TodoRepository --> TodoService: saved Todo
+            TodoService -> TodoService: TodoResponse.from(savedTodo)
+            TodoService --> TodoController: TodoResponse
+            TodoController --> Client: 200 OK (TodoResponse)
+        end
+    end
+end
+@enduml

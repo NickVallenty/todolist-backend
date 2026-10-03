@@ -1,0 +1,29 @@
+@startuml
+title Admin User - Delete User (DELETE /api/admin/users/{userId})
+hide footbox
+actor Client
+participant UserController
+participant AppUserService
+participant AppUserRepository
+participant GlobalExceptionHandler as GEH
+
+Client -> UserController: DELETE /api/admin/users/{userId}
+note right of Client: Already authenticated by JwtAuthenticationFilter\nSecurityConfig: /api/admin/** requires role ADMIN
+
+UserController -> AppUserService: deleteUser(userId)
+
+AppUserService -> AppUserService: findUserOrThrow(userId)
+AppUserService -> AppUserRepository: findById(userId)
+AppUserRepository --> AppUserService: Optional<AppUser>
+
+alt Optional is empty (user not found)
+    AppUserService --> UserController: throw ResourceNotFoundException
+    UserController --> GEH: ResourceNotFoundException
+    GEH --> Client: 404 Not Found
+else User found
+    AppUserService -> AppUserRepository: delete(user)
+    AppUserRepository --> AppUserService: void
+    AppUserService --> UserController: void
+    UserController --> Client: 204 No Content
+end
+@enduml

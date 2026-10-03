@@ -1,0 +1,57 @@
+@startuml updateUser
+title Update User - PUT /api/admin/users/{userId}
+
+actor Admin
+participant UserController
+participant AppUserService
+participant AppUserRepository
+
+Admin -> UserController : PUT /api/admin/users/{userId} (UpdateUserRequest)
+UserController -> AppUserService : updateUser(userId, request)
+
+AppUserService -> AppUserService : findUserOrThrow(userId)
+AppUserService -> AppUserRepository : findById(userId)
+AppUserRepository --> AppUserService : AppUser | empty
+
+alt User not found
+    AppUserService --> UserController : throw ResourceNotFoundException()
+    UserController --> Admin : 404 Not Found
+else User found
+
+    opt username != null && !username.isBlank()
+        AppUserService -> AppUserRepository : existsByUsernameAndUserIdNot(username, userId)
+        AppUserRepository --> AppUserService : true | false
+        alt Username used by another user
+            AppUserService --> UserController : throw DuplicateResourceException()
+            UserController --> Admin : 409 Conflict
+        else Username available
+            AppUserService -> AppUserService : user.setUsername(username)
+        end
+    end
+
+    opt email != null && !email.isBlank()
+        AppUserService -> AppUserRepository : existsByEmailAndUserIdNot(email, userId)
+        AppUserRepository --> AppUserService : true | false
+        alt Email used by another user
+            AppUserService --> UserController : throw DuplicateResourceException()
+            UserController --> Admin : 409 Conflict
+        else Email available
+            AppUserService -> AppUserService : user.setEmail(email)
+        end
+    end
+
+    opt role != null
+        AppUserService -> AppUserService : user.setRole(role)
+    end
+
+    opt status != null
+        AppUserService -> AppUserService : user.setStatus(status)
+    end
+
+    AppUserService -> AppUserRepository : save(user)
+    AppUserRepository --> AppUserService : AppUser
+    AppUserService --> UserController : UserResponse.from(user)
+    UserController --> Admin : 200 OK (UserResponse)
+end
+
+@enduml
