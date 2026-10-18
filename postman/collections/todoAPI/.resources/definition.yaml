@@ -1,0 +1,25 @@
+$kind: collection
+variables:
+  - key: json_web_token_0rod
+    secret: true
+    disabled: false
+  - key: json_web_token_0yp4
+    secret: true
+    disabled: false
+  - key: json_web_token_15h8
+    secret: true
+    disabled: false
+  - key: json_web_token_0fx0
+    secret: true
+    disabled: false
+  - key: json_web_token_08rv
+    secret: true
+    disabled: false
+  - key: test
+    secret: true
+    source:
+      provider: postman
+      postman:
+        type: local
+        secretId: 2463885f-bd6b-4743-bbb0-699df49c6a94
+        vaultId: local

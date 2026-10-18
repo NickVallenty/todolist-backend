@@ -8,10 +8,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-@Service   // khai báo class này là nơi thực hiện nghiệp vụ, giúp chỗ khác có thể gọi nó để thực hiện nghiệp vụ
-@RequiredArgsConstructor   // sinh ra constructure trong lúc biên dịch không cần phải tự constructure
+@Service
+@RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
-
 
     private final AppUserRepository appUserRepository;
 

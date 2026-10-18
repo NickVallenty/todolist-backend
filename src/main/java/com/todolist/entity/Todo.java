@@ -12,8 +12,8 @@ import lombok.ToString;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Todos", indexes = {
-        @Index(name = "idx_todos_userid", columnList = "UserId")
+@Table(name = "todos", indexes = {
+        @Index(name = "idx_todos_user_id", columnList = "user_id")
 })
 @Data
 @Builder
@@ -23,30 +23,30 @@ public class Todo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "TodoId")
+    @Column(name = "todo_id")
     private Long todoId;
 
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "UserId", referencedColumnName = "UserId", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_todo_user"))
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_todos_users"))
     private AppUser user;
 
-    @Column(name = "Title", nullable = false, length = 200)
+    @Column(name = "title", nullable = false, length = 200)
     private String title;
 
-    @Column(name = "Description", columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "Status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     private TodoStatus status;
 
-    @Column(name = "CreatedDate", nullable = false, updatable = false)
+    @Column(name = "created_date", nullable = false, updatable = false)
     private LocalDateTime createdDate;
 
-    @Column(name = "UpdatedDate", nullable = false)
+    @Column(name = "updated_date", nullable = false)
     private LocalDateTime updatedDate;
 
     @PrePersist

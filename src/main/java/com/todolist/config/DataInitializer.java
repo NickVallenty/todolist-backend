@@ -10,7 +10,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-
+/**
+ * Seed một tài khoản Admin mặc định nếu hệ thống chưa có Admin nào,
+ * để đảm bảo luôn đăng nhập được lần đầu tiên khởi động.
+ */
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {

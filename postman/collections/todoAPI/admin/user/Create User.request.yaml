@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{base_url}}/api/admin/users"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"username\": \"user_new01\",\r
+
+    \  \"email\": \"user_new01@gmail.com\",\r
+
+    \  \"password\": \"User@123\",\r
+
+    \  \"role\": \"USER\",\r
+
+    \  \"status\": \"ACTIVE\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{admin_token}}"
+order: 1000

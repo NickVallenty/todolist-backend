@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{base_url}}/api/todos?page=0&size=10&sort=createdDate,desc"
+method: GET
+queryParams:
+  page: "0"
+  size: "10"
+  sort: createdDate,desc
+auth:
+  type: bearer
+  credentials:
+    token: "{{user_new02}}"
+order: 2000

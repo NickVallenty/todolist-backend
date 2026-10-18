@@ -1,0 +1,6 @@
+﻿.idea/
+target/
+*.iml
+*(2)*
+.env
+/todolist-backend/

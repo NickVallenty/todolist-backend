@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/api/profile/update-info"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"fullName\": \"Phạm Văn A\",\r
+
+    \  \"phoneNumber\": \"0912345678\",\r
+
+    \  \"address\": \"123 Lê Lợi, Quận 1, TP.HCM\",\r
+
+    \  \"dateOfBirth\": \"2000-01-31\",\r
+
+    \  \"gender\": \"MALE\",\r
+
+    \  \"bio\": \"Xin chào, mình là sinh viên.\",\r
+
+    \  \"avatarUrl\": \"https://example.com/avatar.png\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{test_token}}"
+order: 2000

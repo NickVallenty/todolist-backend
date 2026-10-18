@@ -15,40 +15,38 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component   // khai báo biến này ở trong container để mỗi lần request tới thì spring sẽ tự dộng quát qua
-@RequiredArgsConstructor  // tự động constructure cho từng object
+@Component
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    // tạo ra thể hiện của Class để sử đụng chức năng
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
-    @Override // dùng để ghi đè lớp cha OncePerRequestFilter
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                      HttpServletResponse response,
                                      FilterChain filterChain) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization"); // bóc tách phần header của request
+        String authHeader = request.getHeader("Authorization");
 
-        // nếu header == null và nó không bắt đầu với Bearer thì bỏ qua bước xử lý khác và dừng lại
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);  // chuyển request và respone cho thằng filter khác xử lý hoặc tới thẳng controller
+            filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7); //trả về phần chuỗi còn lại từ 0->7
+        String token = authHeader.substring(7);
 
         try {
             String username = jwtUtil.extractUsername(token);
 
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {  // nếu user không null và xử lý lại nếu đã có Authentication
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);   // lấy thông tin của user
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (jwtUtil.isTokenValid(token, username) && userDetails.isEnabled()) {   // nếu token này hợp lệ và thông tin của user cũng hợp lệ
+                if (jwtUtil.isTokenValid(token, username) && userDetails.isEnabled()) {
                     UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());  // lấy ra thông tin và quyền truy cập của người này
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));   // lấy thông tin tùy thuộc vào ngữ cảnh rồi nhét vào token
-                    SecurityContextHolder.getContext().setAuthentication(authToken);  //lưu trữ toàn bộ thông tin của một token, mỗi lần có một request mới sẽ lấy ra SecurityContext rồi gán vào authToken
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (JwtException | IllegalArgumentException ex) {
@@ -56,6 +54,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Spring Security sẽ trả 401/403 tương ứng ở bước authorization.
         }
 
-        filterChain.doFilter(request, response); // chuyển request và respone cho thằng filter khác xử lý hoặc tới thẳng controller
+        filterChain.doFilter(request, response);
     }
 }

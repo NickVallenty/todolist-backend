@@ -1,0 +1,95 @@
+@startdot
+digraph UC01 {
+  rankdir=TB;
+  splines=ortho;
+  nodesep=0.6;
+  ranksep=0.5;
+  newrank=true;
+  bgcolor="white";
+  pad=0.3;
+  labelloc=b; labeljust=l; fontsize=11;
+  label="Alternative flows (not drawn): 1.1 Copy schedule from previous day; 1.2 Edit published schedule";
+  fontname="Arial";
+
+  node [fontname="Arial", fontsize=12, shape=box, style=solid, color=black, fontcolor=black,
+        fillcolor=white, penwidth=1.3, margin="0.2,0.1"];
+  edge [fontname="Arial", fontsize=11, color=black, fontcolor=black, arrowsize=0.8, penwidth=1.2];
+
+  subgraph cluster_ht {
+    label=<<B>Head Trainer</B>>; labeljust=c; labelloc=t; style=solid; color=black; penwidth=2;
+    fontname="Arial"; fontsize=14; margin=20;
+    ta_ht [shape=point, style=invis, width=0.01];
+    ba_ht [shape=point, style=invis, width=0.01];
+    start   [shape=circle, style=filled, fillcolor=black, label="", width=0.3, fixedsize=true];
+    n1      [label="1. Select target\nscheduling date"];
+    n3      [label="3. Select horse and enter time slot,\nexercise type, track and intensity"];
+    n4      [label="4. Assign staff in charge"];
+    adjust  [label="Adjust time slot\nor personnel"];
+    d7      [shape=diamond, label="7. More\nhorses?", margin="0.02,0.02"];
+    n8      [label="8. Select\n\"Publish Schedule\""];
+    retry   [label="Retry after\nreconnection"];
+    end_ht  [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.25, fixedsize=true];
+  }
+  subgraph cluster_sys {
+    label=<<B>System</B>>; labeljust=c; labelloc=t; style=solid; color=black; penwidth=2;
+    fontname="Arial"; fontsize=14; margin=20;
+    ta_sys [shape=point, style=invis, width=0.01];
+    ba_sys [shape=point, style=invis, width=0.01];
+    n2      [label="2. Display active horses\nwith their training plans"];
+    n5      [label="5. Check training lock\n(UC-09, include)"];
+    n6      [label="6. Validate: horse is not locked\nand has no scheduling conflict"];
+    dlock   [shape=diamond, label="Horse\nlocked?", margin="0.02,0.02"];
+    dconf   [shape=diamond, label="Staff/track\nconflict?", margin="0.02,0.02"];
+    e1      [label="E1. Flag horse as locked,\nprevent adding it\nto the schedule"];
+    e2      [label="E2. Display\nscheduling conflict"];
+    add     [label="Add entry to\ndraft schedule"];
+    dsave   [shape=diamond, label="Save\nsuccessful?", margin="0.02,0.02"];
+    n9      [label="9. Save schedule\n(status \"Published\")"];
+    notify  [label="Notify Groom and\nHorse Owner"];
+    audit   [label="Record action in\naudit log"];
+    e3      [label="E3. Connection lost:\npreserve draft and\nreport failure"];
+  }
+  subgraph cluster_gr {
+    label=<<B>Groom / Stable Hand</B>>; labeljust=c; labelloc=t; style=solid; color=black; penwidth=2;
+    fontname="Arial"; fontsize=14; margin=20;
+    ta_gr [shape=point, style=invis, width=0.01];
+    ba_gr [shape=point, style=invis, width=0.01];
+    view_gr [label="View updated\nschedule"];
+  }
+  subgraph cluster_ho {
+    label=<<B>Horse Owner</B>>; labeljust=c; labelloc=t; style=solid; color=black; penwidth=2;
+    fontname="Arial"; fontsize=14; margin=20;
+    ta_ho [shape=point, style=invis, width=0.01];
+    ba_ho [shape=point, style=invis, width=0.01];
+    view_ho [label="View updated\nschedule"];
+    end_ho  [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.25, fixedsize=true];
+  }
+
+  { rank=same; ta_ht -> ta_sys -> ta_gr -> ta_ho [style=invis]; }
+  { rank=same; ba_ht -> ba_sys -> ba_gr -> ba_ho [style=invis]; }
+  ta_ht -> start [style=invis];
+  ta_sys -> n2 [style=invis];
+  ta_gr -> view_gr [style=invis];
+  ta_ho -> view_ho [style=invis];
+  end_ht -> ba_ht [style=invis];
+  audit -> ba_sys [style=invis];
+  view_gr -> ba_gr [style=invis];
+  end_ho -> ba_ho [style=invis];
+
+  start -> n1 -> n2 -> n3 -> n4 -> n5 -> n6 -> dlock;
+  dlock -> e1    [xlabel=<<B>yes</B>>];
+  dlock -> dconf [xlabel=<<B>no</B>>];
+  dconf -> e2    [xlabel=<<B>yes</B>>];
+  dconf -> add   [xlabel=<<B>no</B>>];
+  e1 -> d7;
+  e2 -> adjust -> d7;
+  add -> d7;
+  d7 -> n3 [xlabel=<<B>yes</B>>, constraint=false];
+  d7 -> n8 [xlabel=<<B>no</B>>];
+  n8 -> dsave;
+  dsave -> n9 [xlabel=<<B>yes</B>>];
+  n9 -> notify -> audit -> view_gr -> view_ho -> end_ho;
+  dsave -> e3 [xlabel=<<B>no</B>>];
+  e3 -> retry -> end_ht;
+}
+@enddot

@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/api/admin/users/11"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"user_new01.updated@gmail.com\",\r
+
+    \  \"status\": \"INACTIVE\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{admin_token}}"
+order: 3000

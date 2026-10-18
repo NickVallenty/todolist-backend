@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/api/todos"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"title\": \"Học Swagger cho Spring Boot\",\r
+
+    \  \"description\": \"Cấu hình springdoc và thử API trên Swagger UI\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{user_new02}}"
+order: 262

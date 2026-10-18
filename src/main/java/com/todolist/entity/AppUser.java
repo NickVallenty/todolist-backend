@@ -15,13 +15,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Maps to table [Users]. Named "AppUser" in code to avoid clashing with
+ * Maps to table `users`. Named "AppUser" in code to avoid clashing with
  * org.springframework.security.core.userdetails.User.
  */
 @Entity
-@Table(name = "Users", indexes = {
-        @Index(name = "idx_users_username", columnList = "username", unique = true),
-        @Index(name = "idx_users_email", columnList = "email", unique = true)
+@Table(name = "users", indexes = {
+        @Index(name = "uk_users_username", columnList = "username", unique = true),
+        @Index(name = "uk_users_email", columnList = "email", unique = true)
 })
 @Data
 @Builder
@@ -31,27 +31,27 @@ public class AppUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "UserId")
+    @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "Username", nullable = false, unique = true, length = 50)
+    @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(name = "Email", nullable = false, unique = true, length = 100)
+    @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "Password", nullable = false, length = 255)
+    @Column(name = "password", nullable = false, length = 255)
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "Role", nullable = false, length = 10)
+    @Column(name = "role", nullable = false, length = 10)
     private Role role;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "Status", nullable = false, length = 10)
+    @Column(name = "status", nullable = false, length = 10)
     private UserStatus status;
 
-    @Column(name = "CreatedDate", nullable = false, updatable = false)
+    @Column(name = "created_date", nullable = false, updatable = false)
     private LocalDateTime createdDate;
 
     @ToString.Exclude

@@ -1,0 +1,11 @@
+name: Globals
+values:
+  - key: base_url
+    enabled: true
+    secret: true
+  - key: test
+    enabled: true
+    secret: true
+  - key: test_token
+    enabled: true
+    secret: true

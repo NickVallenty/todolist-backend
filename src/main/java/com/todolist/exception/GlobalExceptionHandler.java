@@ -1,6 +1,7 @@
 package com.todolist.exception;
 
 import com.todolist.dto.response.ApiError;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,6 +24,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiError> handleDuplicate(DuplicateResourceException ex) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), null);
+    }
+
+    // Race condition: 2 request đăng ký cùng username/email cùng lúc, lọt qua bước exists...
+    // nhưng bị unique index của DB chặn lại -> trả 409 thay vì 500.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return build(HttpStatus.CONFLICT, "Username hoặc Email đã tồn tại", null);
     }
 
     @ExceptionHandler(BadCredentialsException.class)

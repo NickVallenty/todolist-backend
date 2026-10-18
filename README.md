@@ -1,6 +1,6 @@
 # TodoList Backend API
 
-Backend REST API cho ứng dụng Web TodoList, xây dựng bằng **Spring Boot 3 + Spring Security (JWT) + Spring Data JPA + SQL Server**, theo đúng scope đã mô tả:
+Backend REST API cho ứng dụng Web TodoList, xây dựng bằng **Spring Boot 3 + Spring Security (JWT) + Spring Data JPA + MySQL**, theo đúng scope đã mô tả:
 
 - **Admin**: CRUD User (tạo/xem/sửa/xóa/tìm kiếm/lọc), không đụng vào Todo của User.
 - **User**: CRUD Todo của chính mình, không xem/sửa được Todo của User khác.
@@ -21,7 +21,7 @@ todolist-backend/
 │   ├── TodolistBackendApplication.java
 │   ├── config/          SecurityConfig, DataInitializer (seed admin mặc định)
 │   ├── security/         JwtUtil, JwtAuthenticationFilter, CustomUserDetails(Service)
-│   ├── entity/           AppUser, Todo  (map đúng theo bảng Users/Todos đã thiết kế)
+│   ├── entity/           AppUser, Todo  (map đúng bảng `users`/`todos`, cột snake_case)
 │   ├── enums/            Role, UserStatus, TodoStatus
 │   ├── repository/       AppUserRepository, TodoRepository + Specifications (search/filter)
 │   ├── dto/request|response/
@@ -35,37 +35,48 @@ todolist-backend/
 
 - JDK 21+ (project build với Java 21, tương thích ngược với JDK mới hơn như bạn đang dùng)
 - Maven (dùng luôn Maven Wrapper tích hợp sẵn trong IntelliJ, hoặc `mvn` nếu đã cài)
-- SQL Server 2019 (đang chạy sẵn theo bạn xác nhận)
+- MySQL 8.x (đang chạy sẵn trên máy, port 3306)
 
 ## Cài đặt & chạy
 
 ### 1. Tạo database
 
-Trong SSMS, tạo database rỗng:
+Chạy script `database/schema.sql` (tạo database `todolist_db` + bảng `users`, `todos`):
 
-```sql
-CREATE DATABASE TodoListDB;
+```bash
+mysql -u root -p < database/schema.sql
 ```
 
-Bạn **không cần** tự tạo bảng `Users`/`Todos` — Hibernate sẽ tự tạo theo đúng Entity nhờ cấu hình `ddl-auto: update` (đã map đúng tên cột như 2 ảnh schema bạn gửi: `UserId`, `Username`, `Email`, `Password`, `Role`, `Status`, `CreatedDate` / `TodoId`, `UserId`, `Title`, `Description`, `Status`, `CreatedDate`, `UpdatedDate`).
+Hoặc chạy trực tiếp trong IntelliJ (xem mục 3).
 
-Nếu bạn đã có sẵn 2 bảng này rồi thì cứ để nguyên, Hibernate sẽ chỉ đồng bộ thêm nếu thiếu cột/index, không xóa dữ liệu.
+**Quy tắc đặt tên**: tên bảng chữ thường, số nhiều (`users`, `todos`); tên cột `snake_case`.
+
+| Entity | Bảng | Cột |
+|---|---|---|
+| `AppUser` | `users` | `user_id`, `username`, `email`, `password`, `role`, `status`, `created_date` |
+| `Todo` | `todos` | `todo_id`, `user_id`, `title`, `description`, `status`, `created_date`, `updated_date` |
+
+`ddl-auto` đang để `validate`: Hibernate không tự tạo bảng, chỉ kiểm tra entity có khớp DB không — nếu sai tên bảng/cột, ứng dụng báo lỗi ngay lúc khởi động.
 
 ### 2. Cấu hình kết nối
 
-Sửa `src/main/resources/application.yml`:
+Sửa `src/main/resources/application.yml` (hoặc đặt biến môi trường `DB_USERNAME`, `DB_PASSWORD`):
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:sqlserver://localhost:1433;databaseName=TodoListDB;encrypt=true;trustServerCertificate=true
-    username: sa
-    password: <mật khẩu SQL Server của bạn>
+    url: jdbc:mysql://localhost:3306/todolist_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    username: root
+    password: <mật khẩu MySQL của bạn>
 ```
 
-### 3. Import vào IntelliJ IDEA
+### 3. Import vào IntelliJ IDEA và kết nối MySQL
 
 - Open project → chọn thư mục `todolist-backend` (IntelliJ tự nhận là Maven project và tải dependency).
+- Kết nối MySQL (cần IntelliJ IDEA **Ultimate**; bản Community không có Database tool): `View → Tool Windows → Database` → `+` → `Data Source` → `MySQL`.
+  - Host `localhost`, Port `3306`, User `root`, Password của bạn; ô Database có thể để trống ở bước đầu.
+  - Bấm **Download missing driver files** nếu IntelliJ báo thiếu driver → **Test Connection** → OK.
+- Tạo database: chuột phải vào data source → `New → Query Console`, mở `database/schema.sql`, chọn hết rồi chạy (Ctrl+Enter). Sau đó bấm Refresh, tab `Schemas` tick chọn `todolist_db`.
 - Chạy class `TodolistBackendApplication`.
 
 Hoặc chạy bằng terminal (nếu có Maven):
@@ -91,7 +102,19 @@ Lần đầu khởi động, nếu chưa có Admin nào trong DB, hệ thống t
 
 | Method | Endpoint | Mô tả |
 |---|---|---|
+| POST | `/api/auth/register` | Đăng ký tài khoản mới (luôn là Role=USER, Status=ACTIVE) |
 | POST | `/api/auth/login` | Đăng nhập, trả về JWT |
+
+```json
+POST /api/auth/register
+{ "username": "nguyenvana", "email": "a@gmail.com", "password": "123456", "confirmPassword": "123456" }
+
+-> 201 Created
+{ "userId": 2, "username": "nguyenvana", "email": "a@gmail.com", "role": "USER", "status": "ACTIVE", "createdDate": "2026-10-06T10:00:00" }
+```
+
+Quy tắc đăng ký: username 3–50 ký tự (chữ, số, `.`, `_`, `-`); email hợp lệ; password tối thiểu 6 ký tự và phải khớp `confirmPassword`.
+Lỗi: `400` dữ liệu không hợp lệ, `409` username/email đã tồn tại. Client **không thể** tự chọn role — request không có field `role`; tài khoản ADMIN chỉ do Admin tạo qua `/api/admin/users`.
 
 ```json
 POST /api/auth/login
@@ -126,17 +149,60 @@ Các API bên dưới đều cần header: `Authorization: Bearer <token>`
 
 > Lưu ý: `userId` của Todo **luôn** được lấy từ JWT của người đang đăng nhập, không bao giờ đọc từ body/param — đảm bảo user A không thể thao tác Todo của user B kể cả khi cố tình truyền id.
 
+## Đổi mật khẩu bằng OTP — `/api/account/change-password` (cần đăng nhập, USER hoặc ADMIN)
+
+| Method | Endpoint | Mô tả |
+|---|---|---|
+| POST | `/api/account/change-password/request-otp` | Không body. Gửi OTP 6 số tới email của tài khoản đang đăng nhập |
+| POST | `/api/account/change-password/confirm` | Body `otp`, `newPassword`, `confirmPassword`. Đúng OTP thì đổi mật khẩu (204) |
+
+```json
+POST /api/account/change-password/request-otp      (Authorization: Bearer <token>)
+-> 200 OK
+{ "message": "Đã gửi OTP tới email của bạn", "maskedEmail": "n***@gmail.com", "expiresInSeconds": 300 }
+
+POST /api/account/change-password/confirm          (Authorization: Bearer <token>)
+{ "otp": "123456", "newPassword": "NewPass@123", "confirmPassword": "NewPass@123" }
+-> 204 No Content
+```
+
+Lỗi: `400` OTP sai/hết hạn/sai quá số lần/dữ liệu không hợp lệ/password mới trùng password cũ, `401` thiếu hoặc sai token, `429` xin OTP quá nhanh (kèm header `Retry-After`), `503` không gửi được email.
+
+Quy tắc: OTP hết hạn sau 5 phút, dùng một lần, tối đa 5 lần nhập sai, cách nhau tối thiểu 60 giây giữa 2 lần xin OTP. OTP chỉ được lưu dạng hash BCrypt.
+
+**Cài đặt để chạy được chức năng này**
+
+1. Tạo bảng mới (không ảnh hưởng `users`, `todos`; chạy 1 lần, vì `ddl-auto: validate` sẽ báo lỗi nếu thiếu bảng):
+   ```bash
+   mysql -u root -p < database/password_otps.sql
+   ```
+2. Cấu hình SMTP bằng biến môi trường (không ghi credential vào source). Ví dụ Gmail (dùng App Password):
+   ```
+   SPRING_MAIL_HOST=smtp.gmail.com
+   SPRING_MAIL_PORT=587
+   SPRING_MAIL_USERNAME=<email gửi>
+   SPRING_MAIL_PASSWORD=<app password>
+   SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+   SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+   ```
+   Chưa cấu hình SMTP thì ứng dụng vẫn chạy bình thường, chỉ `request-otp` trả `503`.
+3. (Tùy chọn) tinh chỉnh bằng `app.otp.expiration-minutes` (5), `app.otp.max-attempts` (5), `app.otp.resend-cooldown-seconds` (60), `app.otp.mail-from`.
+
+**Tài liệu liên quan**: sơ đồ tuần tự trong [`docs/UML/`](docs/UML/README.md); Postman Collection import được tại `docs/postman/TodoList-ChangePassword-OTP.postman_collection.json`.
+
+> Lưu ý: JWT đã cấp trước khi đổi mật khẩu vẫn còn hiệu lực đến khi hết hạn (hệ thống chưa có cơ chế thu hồi token).
+
 ## Bảo mật đã implement theo đúng yêu cầu phi chức năng (4.2)
 
 - Password mã hóa một chiều bằng **BCrypt** trước khi lưu DB — không bao giờ trả Password trong bất kỳ response nào (`UserResponse` không có field password).
 - Phân quyền theo Role ở tầng filter chain: `/api/admin/**` chỉ ADMIN, `/api/todos/**` chỉ USER.
-- Mọi thao tác Todo đều kiểm tra `Todo.UserId == JWT.userId`; nếu không khớp trả **404** (thay vì 403) để không lộ việc Todo đó có tồn tại hay không.
-- Foreign key `Todos.UserId -> Users.UserId` được khai báo tường minh ở entity.
-- Index cho `Username`, `Email` (bảng Users) và `UserId` (bảng Todos) để tăng tốc tìm kiếm.
+- Mọi thao tác Todo đều kiểm tra `todos.user_id == JWT.userId`; nếu không khớp trả **404** (thay vì 403) để không lộ việc Todo đó có tồn tại hay không.
+- Foreign key `todos.user_id -> users.user_id` (ON DELETE CASCADE) được khai báo ở cả entity lẫn `schema.sql`.
+- Index cho `username`, `email` (bảng `users`) và `user_id` (bảng `todos`) để tăng tốc tìm kiếm.
 - Response lỗi thống nhất dạng JSON (400/401/403/404/409/500) qua `GlobalExceptionHandler`.
 
 ## Việc bạn có thể cần làm thêm sau này (ngoài phạm vi hiện tại, tham khảo mục 2.4/2.5 trong tài liệu)
 
 - Refresh token (hiện tại token hết hạn sau 24h phải login lại — có thể chỉnh `app.jwt.expiration-ms`).
-- Đổi `ddl-auto: update` → `validate` + script migration (Flyway/Liquibase) khi lên production.
+- Dùng Flyway/Liquibase để quản lý migration thay cho chạy tay `schema.sql` khi lên production.
 - Viết test (unit/integration) cho service & controller nếu bạn cần độ tin cậy cao hơn trước khi release.

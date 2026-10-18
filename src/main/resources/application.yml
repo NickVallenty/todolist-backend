@@ -6,22 +6,35 @@ spring:
     name: todolist-backend
 
   datasource:
-    # Đổi lại thông tin kết nối SQL Server 2019 cho đúng máy của bạn
-    url: jdbc:sqlserver://localhost:1433;databaseName=TodoListDB;encrypt=true;trustServerCertificate=true
-    username: sa
-    password: YourStrong@Passw0rd
-    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    # Đổi lại thông tin kết nối MySQL cho đúng máy của bạn (hoặc set biến môi trường DB_USERNAME / DB_PASSWORD)
+    url: jdbc:mysql://localhost:3306/todolist_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:12345}
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      # dùng "update" khi dev để Hibernate tự tạo/đồng bộ bảng theo Entity.
-      # Khi lên production nên đổi thành "validate" và quản lý schema bằng migration script riêng.
-      ddl-auto: update
+      # Schema được tạo bằng script database/schema.sql (không để Hibernate tự sinh bảng).
+      # "validate": khi khởi động Hibernate chỉ KIỂM TRA entity khớp với bảng/cột trong DB, sai tên là báo lỗi ngay.
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.SQLServerDialect
+
+  # SMTP gửi OTP đổi mật khẩu. KHÔNG ghi mật khẩu vào file này: đặt biến môi trường MAIL_PASSWORD
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:tp361067@gmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+      mail.debug: true
 
   security:
     filter:
@@ -37,3 +50,11 @@ app:
     default-username: admin
     default-email: admin@todolist.local
     default-password: Admin@123
+  springdoc:
+    swagger-ui:
+      path: /swagger-ui.html
+      persist-authorization: true
+      operations-sorter: method
+      tags-sorter: alpha
+    api-docs:
+      path: /v3/api-docs
